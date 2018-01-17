@@ -10,11 +10,17 @@ ENV PATH $JMETER_HOME/bin:$PATH
 ENV RESULTS_LOG results.jtl
 ENV JMETER_FLAGS=
 
-# Install the required tools for JMeter
+# Install the required tools for JMeter and the AWS CLI
 RUN apk add --update --no-cache \
+    ca-certificates \
     curl \
     openssh-client \
-    unzip
+    openssl \
+    python \
+    py-pip \
+    unzip \
+  && pip install \
+    awscli
 
 WORKDIR /opt
 

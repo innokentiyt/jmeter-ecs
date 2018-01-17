@@ -1,0 +1,22 @@
+version: '2'
+
+services:
+  gru:
+    image: smithmicro/jmeter:latest
+    mem_limit: 950m
+    ports:
+      - 1099:1099
+      - 51000:51000
+    command: $INPUT_JMX
+    environment:
+      - AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
+      - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+      - S3_BUCKET=$S3_BUCKET
+      - MINION_HOSTS=$MINION_HOSTS
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: "jmeter"
+        awslogs-region: "us-west-2"
+        awslogs-stream-prefix: "gru"

@@ -22,16 +22,50 @@ if [ ${1##*.} = 'jmx' ]; then
     echo "Using Gru AWS Public HOSTNAME $HOSTNAME"
   fi
   # empty the logs directory, or jmeter may fail
-  rm -rf /logs/report /logs/*.log
-  # run jmeter in client (gru) mode
-  exec jmeter -n $JMETER_FLAGS \
-    -R $MINION_HOSTS \
-    -Dclient.rmi.localport=51000 \
-    -Djava.rmi.server.hostname=${PUBLIC_HOSTNAME} \
-    -l $RESULTS_LOG \
-    -t $1 \
-    -e -o /logs/report
+  rm -rf /logs/report /logs/*.log /logs/*.jtl
 
+  if [ "$S3_BUCKET" != '' ]; then
+    echo "Pulling $1 from $S3_BUCKET"
+    aws s3 cp s3://$S3_BUCKET/$1 $1
+
+    # run jmeter in client (gru) mode
+    jmeter -n $JMETER_FLAGS \
+      -R $MINION_HOSTS \
+      -Dclient.rmi.localport=51000 \
+      -Djava.rmi.server.hostname=${PUBLIC_HOSTNAME} \
+      -l $RESULTS_LOG \
+      -t $1 \
+      -e -o /logs/report \
+      -X
+
+    if [ $? != 0 ]; then
+      echo "jmeter failed with error $?"
+      exit $?
+    fi
+
+    # remove the jmx file then copy all the results back to s3
+    rm $1
+    FOLDER_NAME=$(date -I'seconds')
+    aws s3 cp --recursive --acl public-read . "s3://$S3_BUCKET/$FOLDER_NAME"
+
+    FOLDER_ENCODED=$(python -c "import sys, urllib as ul; print ul.quote(\"$FOLDER_NAME\")")
+
+    echo "*******************"
+    echo "Results url:"
+    echo "https://s3-$AWS_DEFAULT_REGION.amazonaws.com/$S3_BUCKET/$FOLDER_ENCODED/report/index.html"
+    echo "*******************"
+
+    exit 0
+  else
+    # run jmeter in client (gru) mode
+    exec jmeter -n $JMETER_FLAGS \
+      -R $MINION_HOSTS \
+      -Dclient.rmi.localport=51000 \
+      -Djava.rmi.server.hostname=${PUBLIC_HOSTNAME} \
+      -l $RESULTS_LOG \
+      -t $1 \
+      -e -o /logs/report
+  fi
 fi
 
 # act as a 'Minion'

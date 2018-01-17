@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM alpine:3.7
 
 LABEL maintainer="David Sperling <dsperling@smithmicro.com>"
 
@@ -25,7 +25,7 @@ RUN wget -O /usr/local/bin/ecs-cli -q https://s3.amazonaws.com/amazon-ecs-cli/ec
   && chmod +x /usr/local/bin/ecs-cli
 
 # copy our entrypoint script and compose file for the Minions
-COPY lucy.sh lucy.yml /opt/jmeter/
+COPY lucy.sh lucy.yml gru.yml /opt/jmeter/
 RUN chmod +x /opt/jmeter/lucy.sh
 
 WORKDIR /logs
