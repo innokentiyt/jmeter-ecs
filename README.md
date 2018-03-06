@@ -19,9 +19,16 @@ Prerequisites to use this image:
 * Ensure you have a Role named `ecsInstanceRole`.  This is created by the ECS first-run experience.
   * More details here: http://docs.aws.amazon.com/AmazonECS/latest/developerguide/instance_IAM_role.html
 
-** If you do not have a VPC created, you can use the included `aws-setup.sh` script to create the VPC, Subnet and required Security Group.
+** If you do not have a VPC created, you can use the included `setup.sh` function create the VPC, Subnet and required Security Group.  Run the following:
+```
+docker run \
+    --env AWS_ACCESS_KEY_ID=<key id> \
+    --env AWS_SECRET_ACCESS_KEY=<access key> \
+    --env AWS_DEFAULT_REGION=<region> \
+    smithmicro/lucy setup
+```
 
-Docker run template:
+Once you uhave the environment setup, use this Docker run template:
 ```
 docker run -v <oath to jmx>:/plans -v <path to pem>:/keys -v <path to logs>:/logs \
     --env AWS_ACCESS_KEY_ID=<key id> \

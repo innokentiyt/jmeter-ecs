@@ -24,9 +24,8 @@ RUN apk add --update --no-cache \
 RUN wget -O /usr/local/bin/ecs-cli -q https://s3.amazonaws.com/amazon-ecs-cli/ecs-cli-linux-amd64-latest \
   && chmod +x /usr/local/bin/ecs-cli
 
-# copy our entrypoint script and compose file for the Minions
-COPY lucy.sh lucy.yml gru.yml /opt/jmeter/
-RUN chmod +x /opt/jmeter/lucy.sh
+# copy our entrypoint & setup scripts and compose files for the Minions & Gru
+COPY *.sh *.yml /opt/jmeter/
 
 WORKDIR /logs
 

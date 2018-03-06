@@ -8,9 +8,28 @@
 
 # if the command line is not a .jmx file, then it's another command the user wants to call
 if [ "${1}" != '' ]; then
+  if [ ${1} == 'setup' ]; then
+    if [ "$AWS_DEFAULT_REGION" == '' ]; then
+      echo "Define the AWS_DEFAULT_REGION environment variable"
+      exit 10
+    fi
+    if [ "$AWS_ACCESS_KEY_ID" == '' ]; then
+      echo "Define the AWS_ACCESS_KEY_ID environment variable"
+      exit 10
+    fi
+    if [ "$AWS_SECRET_ACCESS_KEY" == '' ]; then
+      echo "Define the AWS_SECRET_ACCESS_KEY environment variable"
+      exit 10
+    fi
+    exec /opt/jmeter/aws-setup.sh
+  fi
   if [ ${1##*.} != 'jmx' ]; then
     exec "$@"
   fi
+fi
+
+if [ "$LAUNCH_TYPE" == 'FARGATE' ]; then
+  exec /opt/jmeter/lucy-fargate.sh $1
 fi
 
 # check for all required variables
@@ -106,10 +125,10 @@ while true; do
 done
 
 # Step 3 - Run the Minion task with the requested JMeter version, instance count and memory
-sed -i 's/jmeter:latest/jmeter:'"$JMETER_VERSION"'/' /opt/jmeter/lucy.yml
-sed -i 's/950m/'"$MEM_LIMIT"'/' /opt/jmeter/lucy.yml
-ecs-cli compose --file /opt/jmeter/lucy.yml up --cluster $CLUSTER_NAME
-ecs-cli compose --file /opt/jmeter/lucy.yml --cluster $CLUSTER_NAME scale $MINION_COUNT
+sed -i 's/jmeter:latest/jmeter:'"$JMETER_VERSION"'/' /opt/jmeter/minion.yml
+sed -i 's/950m/'"$MEM_LIMIT"'/' /opt/jmeter/minion.yml
+ecs-cli compose --file /opt/jmeter/minion.yml up --cluster $CLUSTER_NAME
+ecs-cli compose --file /opt/jmeter/minion.yml --cluster $CLUSTER_NAME scale $MINION_COUNT
 
 # Step 4 - Get Gru and Minion's instance ID's.  Gru is the container with a runningTasksCount = 0
 CONTAINER_INSTANCE_IDS=$(aws ecs list-container-instances --cluster $CLUSTER_NAME --output text |
@@ -149,14 +168,14 @@ if [ "$S3_BUCKET" != '' ]; then
   sed -i 's/jmeter:latest/jmeter:'"$JMETER_VERSION"'/' /opt/jmeter/gru.yml
   sed -i 's/950m/'"$MEM_LIMIT"'/' /opt/jmeter/gru.yml
   sed -i 's/$INPUT_JMX/'"$INPUT_JMX"'/' /opt/jmeter/gru.yml
-  sed -i 's/$AWS_DEFAULT_REGION/'"$AWS_DEFAULT_REGION"'/' /opt/jmeter/gru.yml
+  sed -i 's/$AWS_DEFAULT_REGION/'"$AWS_DEFAULT_REGION"'/g' /opt/jmeter/gru.yml
   sed -i 's/$AWS_ACCESS_KEY_ID/'"$AWS_ACCESS_KEY_ID"'/' /opt/jmeter/gru.yml
   sed -i 's|$AWS_SECRET_ACCESS_KEY|'"$AWS_SECRET_ACCESS_KEY"'|' /opt/jmeter/gru.yml
   sed -i 's/$S3_BUCKET/'"$S3_BUCKET"'/' /opt/jmeter/gru.yml
   sed -i 's/$MINION_HOSTS/'"$MINION_HOSTS"'/' /opt/jmeter/gru.yml
   ecs-cli compose --file /opt/jmeter/gru.yml --project-name $GRU_TASK_NAME up --cluster $CLUSTER_NAME --create-log-groups
 
-  # Step 7 - Gru is posting results to S3 - wait until the instance
+  # Step 7 - Gru is posting results to S3 - wait until all instances have 0 tasks running
   while true; do
     WORKING_INSTANCE_IDS=$(aws ecs describe-container-instances --cluster $CLUSTER_NAME \
       --container-instances $CONTAINER_INSTANCE_IDS --query 'containerInstances[*].[ec2InstanceId,runningTasksCount]' --output text | grep '\t1' | awk '{print $1}')
