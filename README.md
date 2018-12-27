@@ -1,6 +1,8 @@
 # JMeter for ECS
 JMeter Images for Distributed Testing on EC2 Container Service (ECS)
 
+This is a fork of Smith Micro's jmeter-ecs. WARNING! Changes are not compatible with original work.
+
 This application uses two images:
 * `smithmicro/jmeter` - Contains the JMeter software that is deployed in ECS
 * `smithmicro/lucy` - The orchestration image that can run behind a corporate firewall and manages AWS resources
